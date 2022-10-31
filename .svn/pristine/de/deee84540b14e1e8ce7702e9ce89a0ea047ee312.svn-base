@@ -1,0 +1,44 @@
+package com.daomingedu.talentgame.mvp.model
+
+import android.app.Application
+import com.daomingedu.talentgame.mvp.contract.MeContract
+import com.daomingedu.talentgame.mvp.model.api.service.CerStuService
+import com.daomingedu.talentgame.mvp.model.api.service.CommonService
+import com.daomingedu.talentgame.mvp.model.api.service.CustomerService
+import com.daomingedu.talentgame.mvp.model.entity.AboutUsBean
+import com.daomingedu.talentgame.mvp.model.entity.BaseJson
+import com.daomingedu.talentgame.mvp.model.entity.CheckCerBean
+import com.daomingedu.talentgame.mvp.model.entity.UserInfoBean
+import com.google.gson.Gson
+import com.jess.arms.di.scope.FragmentScope
+import com.jess.arms.integration.IRepositoryManager
+import com.jess.arms.mvp.BaseModel
+import io.reactivex.Observable
+import javax.inject.Inject
+
+/**
+ * Created by jianhongxu on 3/31/21
+ * Description
+ */
+@FragmentScope
+class MeModel
+@Inject
+constructor(repositoryManager:IRepositoryManager):BaseModel(repositoryManager),MeContract.Model{
+    @Inject
+    lateinit var mGson: Gson;
+    @Inject
+    lateinit var mApplication: Application;
+    override fun logout(sessionId: String): Observable<BaseJson<Any>> {
+        return mRepositoryManager.obtainRetrofitService(CustomerService::class.java).logout(sessionId)
+    }
+
+    override fun getCustomerInfo(sessionId: String): Observable<BaseJson<UserInfoBean>> {
+        return mRepositoryManager.obtainRetrofitService(CustomerService::class.java).getCustomerInfo(sessionId)
+    }
+
+    override fun aboutUs(sessionId: String): Observable<BaseJson<AboutUsBean>> {
+        return mRepositoryManager.obtainRetrofitService(CommonService::class.java).aboutUs(sessionId)
+    }
+
+
+}

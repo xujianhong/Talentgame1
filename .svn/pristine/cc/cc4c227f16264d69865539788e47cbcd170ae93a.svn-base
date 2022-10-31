@@ -1,0 +1,441 @@
+package com.daomingedu.talentgame.mvp.ui
+
+import android.Manifest
+import android.app.Activity
+import android.app.ProgressDialog
+import android.content.DialogInterface
+import android.content.Intent
+import android.graphics.Bitmap
+import android.os.Bundle
+import android.text.TextUtils
+import android.util.Log
+import android.view.View
+import android.widget.Toast
+import androidx.appcompat.app.AlertDialog
+import androidx.appcompat.app.AppCompatActivity
+import com.bumptech.glide.Glide
+import com.bumptech.glide.load.DataSource
+import com.bumptech.glide.load.engine.GlideException
+import com.bumptech.glide.request.RequestListener
+import com.bumptech.glide.request.RequestOptions
+import com.bumptech.glide.request.target.Target
+import com.daomingedu.onecp.app.Constant
+import com.daomingedu.onecp.app.onClick
+import com.daomingedu.talentgame.R
+import com.daomingedu.talentgame.app.Preference
+import com.daomingedu.talentgame.di.component.DaggerMusicRaceUploadComponent
+import com.daomingedu.talentgame.di.module.MusicRaceUploadModule
+import com.daomingedu.talentgame.mvp.contract.MusicRaceUploadContract
+import com.daomingedu.talentgame.mvp.model.entity.CompareFaceScoreBean
+import com.daomingedu.talentgame.mvp.model.entity.LocalWork
+import com.daomingedu.talentgame.mvp.model.entity.UploadVideoAppPage
+import com.daomingedu.talentgame.mvp.model.entity.UploadVideoParamBean
+import com.daomingedu.talentgame.mvp.presenter.MusicRaceUploadPresenter
+import com.daomingedu.talentgame.util.*
+import com.google.gson.Gson
+import com.jess.arms.base.BaseActivity
+import com.jess.arms.di.component.AppComponent
+import com.jess.arms.utils.ArmsUtils
+import com.jmolsmobile.landscapevideocapture.VideoCaptureActivity
+import com.jmolsmobile.landscapevideocapture.configuration.CaptureConfiguration
+import com.jmolsmobile.landscapevideocapture.configuration.PredefinedCaptureConfigurations
+import com.pili.pldroid.player.PLOnCompletionListener
+import com.pili.pldroid.player.PLOnErrorListener
+import com.tbruyelle.rxpermissions2.RxPermissions
+import com.tencent.cos.xml.CosXmlServiceConfig
+import com.tencent.cos.xml.CosXmlSimpleService
+import com.tencent.cos.xml.exception.CosXmlClientException
+import com.tencent.cos.xml.exception.CosXmlServiceException
+import com.tencent.cos.xml.listener.CosXmlProgressListener
+import com.tencent.cos.xml.listener.CosXmlResultListener
+import com.tencent.cos.xml.model.CosXmlRequest
+import com.tencent.cos.xml.model.CosXmlResult
+import com.tencent.cos.xml.transfer.TransferConfig
+import com.tencent.cos.xml.transfer.TransferManager
+import kotlinx.android.synthetic.main.activity_music_race_upload.*
+import kotlinx.android.synthetic.main.activity_music_race_upload.PLVideoTextureView
+import kotlinx.android.synthetic.main.activity_upload_video_play.*
+import kotlinx.android.synthetic.main.include_title.*
+import timber.log.Timber
+import java.io.File
+
+/**
+ * Description
+ * Created by jianhongxu on 4/14/21
+ */
+class MusicRaceUploadActivity : BaseActivity<MusicRaceUploadPresenter>(),
+    MusicRaceUploadContract.View {
+
+    var uploadVideoParamBean: UploadVideoParamBean? =null
+    lateinit var dataPage: UploadVideoAppPage
+
+    //上传的文件
+    var selectVideoFile: File? = null
+
+    private var videoPixel by Preference(Constant.VIDEO_PIXEL, 0)
+    private var videoTime by Preference(Constant.VIDEO_TIME, 0)
+
+    var progressDialog: ProgressDialog? = null
+
+    private lateinit var errorMsg:String
+
+
+    override fun setupActivityComponent(appComponent: AppComponent) {
+        DaggerMusicRaceUploadComponent.builder().appComponent(appComponent).musicRaceUploadModule(
+            MusicRaceUploadModule(this)
+        ).build().inject(this)
+    }
+
+    override fun initView(savedInstanceState: Bundle?): Int {
+        return R.layout.activity_music_race_upload
+    }
+
+    override fun initData(savedInstanceState: Bundle?) {
+        title = "上传视频"
+
+
+        dataPage = intent.getSerializableExtra(DATA_TYPE) as UploadVideoAppPage
+
+//        dataPage = UploadVideoAppPage()
+//        dataPage.apiUrl = "http://114.117.194.109/talentgame_cq//api/forApp"
+//        dataPage.testSignId = "218e4aa4da1e4a379c2ed5eda124f9f7"
+//        dataPage.studentId = "8be43a0c972c4cee883e5ea7058d8044"
+
+        videoTime = dataPage.limitNum
+
+        mPresenter?.getUploadVideoParam(
+            dataPage.apiUrl + "/getUploadVideoParam.do",
+            dataPage.testSignId,
+            dataPage.studentId
+        )
+
+
+
+        vVideo.onClick {
+
+            val builder = AlertDialog.Builder(this@MusicRaceUploadActivity)
+            builder.setMessage("请选择上传视频方式")
+            builder.setPositiveButton("立即拍摄", object : DialogInterface.OnClickListener{
+                override fun onClick(dialog: DialogInterface?, which: Int) {
+                    val dismiss = dialog?.dismiss()
+                    when (MemoryUtil.memoryIsAvailble(this@MusicRaceUploadActivity)){
+                        MemoryUtil.MEMORY_OK -> {
+                            RxPermissions(this@MusicRaceUploadActivity).request(
+                                Manifest.permission.RECORD_AUDIO,
+                                Manifest.permission.READ_EXTERNAL_STORAGE,
+                                Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                                Manifest.permission.CAMERA
+                            )
+                                .subscribe {
+                                    if (it) {
+                                        mPresenter?.getWaterMark()
+                                    } else {
+                                        Toast.makeText(this@MusicRaceUploadActivity, "请开启相关权限", Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                        }
+                        MemoryUtil.MEMORY_OUT -> {
+                            val dialog = AlertDialog.Builder(this@MusicRaceUploadActivity)
+                            dialog.setMessage("存储空间过小, 可能会出现录制完了无法保存视频的情况, 是否继续拍摄视频")
+                            dialog.setCancelable(false)
+                            dialog.setPositiveButton("继续", object : DialogInterface.OnClickListener{
+                                override fun onClick(dialog: DialogInterface?, which: Int) {
+                                    dialog?.dismiss()
+                                    RxPermissions(this@MusicRaceUploadActivity).request(
+                                        Manifest.permission.RECORD_AUDIO,
+                                        Manifest.permission.READ_EXTERNAL_STORAGE,
+                                        Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                                        Manifest.permission.CAMERA
+                                    )
+                                        .subscribe {
+                                            if (it) {
+                                                mPresenter?.getWaterMark()
+                                            } else {
+                                                Toast.makeText(this@MusicRaceUploadActivity, "请开启相关权限", Toast.LENGTH_SHORT).show()
+                                            }
+                                        }
+                                }
+                            })
+                            dialog.setNegativeButton("取消", object : DialogInterface.OnClickListener{
+                                override fun onClick(dialog: DialogInterface?, which: Int) {
+                                    dialog?.dismiss()
+                                }
+                            })
+                            dialog.create().show()
+                        }
+                    }
+                }
+            })
+            builder.setNegativeButton("选择缓存视频", object : DialogInterface.OnClickListener{
+                override fun onClick(dialog: DialogInterface?, which: Int) {
+                    dialog?.dismiss()
+                    UploadVideoListActivity.startUploadVideoListActivity(this@MusicRaceUploadActivity, UploadVideoListActivity.TYPE_RETURN_YES, dataPage.isShowImport)
+                }
+            })
+            builder.create().show()
+
+
+//            UploadVideoListActivity.startUploadVideoListActivity(
+//                this@MusicRaceUploadActivity,
+//                UploadVideoListActivity.TYPE_RETURN_YES,
+//                UploadVideoListActivity.IMPORT_NO
+//            )
+        }
+
+        btnUpload.onClick {
+            if (uploadVideoParamBean == null) {
+                Timber.e("腾讯云所需数据为null")
+                showMessage(errorMsg)
+                return@onClick
+            }
+            if (selectVideoFile == null || !selectVideoFile!!.exists()) {
+                showMessage("选择视频或拍摄视频")
+                return@onClick
+            }
+
+            updateCoS(selectVideoFile!!, uploadVideoParamBean!!)
+        }
+    }
+
+    override fun onBackPressed() {
+        val intent = Intent()
+        intent.putExtra("result", 3)
+        setResult(Activity.RESULT_OK, intent)
+        super.onBackPressed()
+    }
+
+
+    /**
+     * 上传腾讯云
+     */
+    private fun updateCoS(file: File, bean: UploadVideoParamBean) {
+
+        val credentials = bean.cosTempKey.credentials
+        val mySessionCredentialProvider = MySessionCredentialProvider(
+            credentials.tmpSecretId,
+            credentials.tmpSecretKey,
+            credentials.sessionToken,
+            bean.cosTempKey.startTime.toLong(),
+            bean.cosTempKey.expiredTime.toLong()
+        )
+        val serviceConfig = CosXmlServiceConfig.Builder()
+            .setRegion(bean.region)
+            .builder()
+        val cosXmlService = CosXmlSimpleService(this, serviceConfig, mySessionCredentialProvider)
+        val transferConfig = TransferConfig.Builder().build()
+        val transferManager = TransferManager(
+            cosXmlService,
+            transferConfig
+        )
+
+        val bucket = bean.bucketName  //存储桶，格式：BucketName-APPID
+        val cosPath = "/${bean.uploadKey}mp4" //对象在存储桶中的位置标识符，即称对象键
+        val srcPath = file.absolutePath
+        val uploadId: String? = null
+
+        progressDialog = ProgressDialog(this)
+        progressDialog?.setCancelable(false)
+        progressDialog?.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL)
+        progressDialog?.setMessage("视频上传中")
+        progressDialog?.show()
+        // 上传文件
+        val cosxmlUploadTask = transferManager.upload(
+            bucket, cosPath,
+            srcPath, uploadId
+        )
+        cosxmlUploadTask.setCosXmlProgressListener { complete, target ->
+            Timber.d("onProgress")
+            Timber.d(complete.toString())
+            Timber.d(target.toString())
+            progressDialog?.max = 100
+            progressDialog?.progress =
+                (((complete.toDouble() / target.toDouble()) * 100).toInt())
+        }
+        cosxmlUploadTask.setCosXmlResultListener(object : CosXmlResultListener {
+            override fun onSuccess(request: CosXmlRequest?, result: CosXmlResult?) {
+                Timber.d("onSuccess")
+                Timber.d(Gson().toJson(result))
+                progressDialog?.dismiss()
+                //腾讯云上传成功后
+
+                mPresenter?.saveUploadVideo(
+                    dataPage.apiUrl + "/saveUploadVideo.do",
+                    dataPage.testSignId, dataPage.studentId,
+                    "${uploadVideoParamBean?.uploadKey}mp4",
+                    selectVideoFile?.length().toString()
+                )
+
+            }
+
+            override fun onFail(
+                request: CosXmlRequest?,
+                exception: CosXmlClientException?,
+                serviceException: CosXmlServiceException?
+            ) {
+                Timber.d("onFail")
+                Timber.d(exception?.errorCode.toString())
+                Timber.d(serviceException?.message)
+                progressDialog?.dismiss()
+            }
+
+        })
+    }
+
+
+    override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
+        super.onActivityResult(requestCode, resultCode, data)
+        if (resultCode != RESULT_OK) return
+        var videoPath: String? = null
+        when (requestCode) {
+            UploadVideoListActivity.REQUEST_CODE -> {
+                videoPath = data?.extras?.getString("result")!!
+
+            }
+            LocalWork.VIDEO -> {
+                videoPath = data!!.getStringExtra(VideoCaptureActivity.EXTRA_OUTPUT_FILENAME)
+            }
+        }
+
+        if (TextUtils.isEmpty(videoPath)) return
+        if (selectVideoFile != null && selectVideoFile!!.exists()) {
+            selectVideoFile?.delete()
+        }
+        selectVideoFile = File(videoPath)
+        Timber.e("获得路径：   %s", selectVideoFile?.absolutePath)
+        initVideoPlay(selectVideoFile!!.absolutePath)
+    }
+
+    /**
+     * 初始化视频播放
+     */
+    private fun initVideoPlay(videoPath: String) {
+
+//        loadVideoScreenshot(videoPath)
+        PLVideoTextureView.visibility = View.VISIBLE
+
+        PLVideoTextureView.setMediaController(MediaController(this))
+        PLVideoTextureView.setVideoPath(videoPath)
+        PLVideoTextureView.start()
+        PLVideoTextureView.setOnErrorListener { false }
+        PLVideoTextureView.setOnCompletionListener { }
+    }
+
+    private fun loadVideoScreenshot(videoPath: String) {
+        Glide.with(this)
+            .setDefaultRequestOptions(
+                RequestOptions()
+                    .frame(3000000L)
+            ).asBitmap()
+            .load(videoPath).addListener(object : RequestListener<Bitmap> {
+                override fun onLoadFailed(
+                    e: GlideException?,
+                    model: Any?,
+                    target: Target<Bitmap>?,
+                    isFirstResource: Boolean
+                ): Boolean {
+
+                    return false
+                }
+
+                override fun onResourceReady(
+                    resource: Bitmap?,
+                    model: Any?,
+                    target: Target<Bitmap>?,
+                    dataSource: DataSource?,
+                    isFirstResource: Boolean
+                ): Boolean {
+//                    ivVideo.setImageBitmap(resource)
+                    val base64 = Utils.encodeImage(resource!!)
+                    mPresenter?.getCompareFaceScore(dataPage.testSignId, base64)
+                    return false
+                }
+
+            }).submit()
+
+    }
+
+    override fun requestUploadVideoParamSuccess(bean: UploadVideoParamBean) {
+        uploadVideoParamBean = bean
+        tvText.text = bean.remark
+    }
+
+    override fun requestUploadVideoParamError(msg: String) {
+        errorMsg = msg
+    }
+
+
+    override fun requestSaveUploadVideoSuccess() {
+        Toast.makeText(this, "视频上传成功", Toast.LENGTH_SHORT).show()
+        hideLoading()
+        val intent = Intent()
+        intent.putExtra("result", 1)
+        setResult(Activity.RESULT_OK, intent)
+        finish()
+    }
+
+    override fun requestWaterMarkSuccess() {
+        takeVideo("")
+    }
+
+    override fun requestCompareFaceScoreSuccess(bean: CompareFaceScoreBean) {
+        tvScore.text = bean.text
+    }
+
+
+    /**
+     * 打开摄像头录像
+     */
+    private fun takeVideo(fileName: String) {
+        val config = createCaptureConfiguration()
+        val intent = Intent(this, VideoCaptureActivity::class.java)
+        intent.putExtra(VideoCaptureActivity.EXTRA_CAPTURE_CONFIGURATION, config)
+        intent.putExtra(VideoCaptureActivity.EXTRA_OUTPUT_FILENAME, fileName) //文件名称
+        intent.putExtra(VideoCaptureActivity.WATER, SharedPreferencesUtil.getWater(this))
+
+        intent.putExtra("videoType", 1)
+        startActivityForResult(intent, LocalWork.VIDEO)
+    }
+
+    private fun createCaptureConfiguration(): CaptureConfiguration {
+        //分辨率
+        val resolution = when (videoPixel) {
+            1 -> PredefinedCaptureConfigurations.CaptureResolution.RES_480P
+            2 -> PredefinedCaptureConfigurations.CaptureResolution.RES_720P
+            3 -> PredefinedCaptureConfigurations.CaptureResolution.RES_1080P
+            else -> PredefinedCaptureConfigurations.CaptureResolution.RES_480P
+        }
+        //质量
+        val quality = PredefinedCaptureConfigurations.CaptureQuality.LOW //低质量
+        //限制时长
+        //val fileDuration = videoTime * 60 //10分钟
+        val fileDuration = videoTime //秒
+        //限制大小
+        val filesize = CaptureConfiguration.NO_FILESIZE_LIMIT //不限
+        //true显示录制视频时的时间，false为不显示
+        val builder =
+            CaptureConfiguration.Builder(resolution, quality)
+        builder.maxDuration(fileDuration)
+//        builder.maxFileSize(((application as MyApp).getVideo() / 1024 / 1024) as Int)
+        builder.frameRate(PredefinedCaptureConfigurations.FPS_30)
+        builder.noCameraToggle()
+        builder.showRecordingTime()
+        return builder.build()
+    }
+
+
+
+
+    override fun showMessage(message: String) {
+        ArmsUtils.snackbarText(message)
+    }
+
+    companion object {
+
+        const val DATA_TYPE = "UploadVideoAppPage"
+        fun startActivity(activity: AppCompatActivity, data: UploadVideoAppPage) {
+            val intent = Intent(activity, MusicRaceUploadActivity::class.java)
+            intent.putExtra(DATA_TYPE, data)
+            activity.startActivityForResult(intent, 0)
+        }
+    }
+}

@@ -1,0 +1,48 @@
+package com.daomingedu.talentgame.mvp.model.entity;
+
+import java.io.Serializable;
+
+/**
+ * Description
+ * Created by jianhongxu on 4/14/21
+ */
+public class UploadVideoAppPage implements Serializable {
+
+
+    String APIUrl;
+    String testSignId;
+    String studentId;
+    String limitNum;
+
+    public String getAPIUrl() {
+        return APIUrl;
+    }
+
+    public void setAPIUrl(String APIUrl) {
+        this.APIUrl = APIUrl;
+    }
+
+    public String getTestSignId() {
+        return testSignId;
+    }
+
+    public void setTestSignId(String testSignId) {
+        this.testSignId = testSignId;
+    }
+
+    public String getStudentId() {
+        return studentId;
+    }
+
+    public void setStudentId(String studentId) {
+        this.studentId = studentId;
+    }
+
+    public String getLimitNum() {
+        return limitNum;
+    }
+
+    public void setLimitNum(String limitNum) {
+        this.limitNum = limitNum;
+    }
+}

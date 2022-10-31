@@ -1,0 +1,19 @@
+package com.daomingedu.talentgame.mvp.contract
+
+import com.jess.arms.mvp.IModel
+import com.jess.arms.mvp.IView
+
+/**
+ * Description
+ * Created by jianhongxu on 4/7/21
+ */
+interface MusicTestContract {
+
+    interface View:IView{
+    }
+
+    interface Model:IModel{
+    }
+
+
+}

@@ -1,0 +1,52 @@
+package com.daomingedu.talentgame.mvp.ui.fragment
+
+import android.os.Bundle
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import com.daomingedu.talentgame.R
+import com.daomingedu.talentgame.di.component.DaggerMeComponent
+import com.daomingedu.talentgame.di.module.MeModule
+import com.daomingedu.talentgame.mvp.contract.MeContract
+import com.daomingedu.talentgame.mvp.presenter.MePresenter
+import com.jess.arms.base.BaseFragment
+import com.jess.arms.di.component.AppComponent
+import com.jess.arms.utils.ArmsUtils
+
+/**
+ * Created by jianhongxu on 3/31/21
+ * Description
+ */
+class MeFragment : BaseFragment<MePresenter>(), MeContract.View {
+    override fun setupFragmentComponent(appComponent: AppComponent) {
+        DaggerMeComponent.builder().appComponent(appComponent).meModule(MeModule(this)).build()
+            .inject(this)
+    }
+
+    companion object{
+        const val TAG = "MeFragment"
+        fun newInstance():MeFragment{
+            return MeFragment()
+        }
+    }
+
+    override fun initView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View {
+        return inflater.inflate(R.layout.fragment_me, container, false)
+    }
+
+    override fun initData(savedInstanceState: Bundle?) {
+
+    }
+
+    override fun setData(data: Any?) {
+
+    }
+
+    override fun showMessage(message: String) {
+        ArmsUtils.snackbarText(message)
+    }
+}

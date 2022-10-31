@@ -1,0 +1,40 @@
+package com.daomingedu.talentgame.mvp.model
+
+import android.app.Application
+import com.daomingedu.talentgame.mvp.contract.MainContract
+import com.daomingedu.talentgame.mvp.model.api.service.CommonService
+import com.daomingedu.talentgame.mvp.model.entity.AboutUsBean
+import com.daomingedu.talentgame.mvp.model.entity.BaseJson
+import com.daomingedu.talentgame.mvp.model.entity.VersionBean
+import com.google.gson.Gson
+import com.jess.arms.di.scope.ActivityScope
+import com.jess.arms.integration.IRepositoryManager
+import com.jess.arms.mvp.BaseModel
+import io.reactivex.Observable
+import javax.inject.Inject
+
+/**
+ * Created by jianhongxu on 3/31/21
+ * Description
+ */
+@ActivityScope
+class MainModel
+@Inject
+constructor(repositoryManager: IRepositoryManager) : BaseModel(repositoryManager),
+    MainContract.Model {
+
+    @Inject
+    lateinit var mGson: Gson;
+
+    @Inject
+    lateinit var mApplication: Application;
+    override fun getVersionInfo(key: String, systemType: Int): Observable<BaseJson<VersionBean>> {
+        return mRepositoryManager.obtainRetrofitService(CommonService::class.java)
+            .getVersionInfo(key, systemType)
+    }
+
+    override fun aboutUs(): Observable<BaseJson<AboutUsBean>> {
+        return mRepositoryManager.obtainRetrofitService(CommonService::class.java).aboutUs()
+    }
+
+}

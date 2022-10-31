@@ -1,0 +1,132 @@
+package com.daomingedu.talentgame.mvp.ui
+
+
+import android.graphics.drawable.Drawable
+import android.os.Bundle
+import android.view.View
+import androidx.core.content.ContextCompat
+import androidx.fragment.app.Fragment
+import com.daomingedu.onecp.app.onClick
+import com.daomingedu.talentgame.R
+import com.daomingedu.talentgame.di.component.DaggerMainComponent
+import com.daomingedu.talentgame.di.module.MainModule
+import com.daomingedu.talentgame.mvp.contract.MainContract
+import com.daomingedu.talentgame.mvp.presenter.MainPresenter
+import com.daomingedu.talentgame.mvp.ui.fragment.HomeFragment
+import com.daomingedu.talentgame.mvp.ui.fragment.MeFragment
+import com.jess.arms.base.BaseActivity
+import com.jess.arms.di.component.AppComponent
+import com.jess.arms.utils.ArmsUtils
+import kotlinx.android.synthetic.main.activity_main.*
+import timber.log.Timber
+import javax.inject.Inject
+
+
+class MainActivity : BaseActivity<MainPresenter>(), MainContract.View, View.OnClickListener {
+
+    @Inject
+    lateinit var homeFragment: HomeFragment
+
+    @Inject
+    lateinit var meFragment: MeFragment
+
+
+    override fun setupActivityComponent(appComponent: AppComponent) {
+        DaggerMainComponent.builder().appComponent(appComponent).mainModule(MainModule(this))
+            .build().inject(this)
+    }
+
+    override fun initView(savedInstanceState: Bundle?): Int {
+        return R.layout.activity_main
+    }
+
+    override fun initData(savedInstanceState: Bundle?) {
+
+        switchFragment(homeFragment, HomeFragment.TAG)
+
+        Btn1.onClick(this)
+        Btn2.onClick(this)
+    }
+
+    override fun showMessage(message: String) {
+        ArmsUtils.snackbarText(message)
+    }
+
+    override fun onClick(v: View?) {
+
+        Timber.e(v?.id.toString())
+        when (v?.id) {
+            R.id.Btn1 -> {
+                val dMain: Drawable = ContextCompat.getDrawable(this, R.mipmap.icon_main_true)!!
+                dMain.setBounds(0, 0, dMain.minimumWidth, dMain.minimumHeight)
+                Btn1.setCompoundDrawables(
+                    null,
+                    dMain,
+                    null,
+                    null
+                )
+                Btn1.setTextColor(ContextCompat.getColor(this, R.color.green_700))
+
+                val dMe: Drawable = ContextCompat.getDrawable(this, R.mipmap.icon_me_false)!!
+                dMe.setBounds(0, 0, dMe.minimumWidth, dMe.minimumHeight)
+                Btn2.setCompoundDrawables(
+                    null,
+                    dMe,
+                    null,
+                    null
+                )
+                Btn2.setTextColor(ContextCompat.getColor(this, R.color.black))
+
+
+                switchFragment(homeFragment, HomeFragment.TAG)
+
+            }
+            R.id.Btn2 -> {
+                val dMain: Drawable = ContextCompat.getDrawable(this, R.mipmap.icon_main_false)!!
+                dMain.setBounds(0, 0, dMain.minimumWidth, dMain.minimumHeight)
+                Btn1.setCompoundDrawables(
+                    null,
+                    dMain,
+                    null,
+                    null
+                )
+                Btn1.setTextColor(ContextCompat.getColor(this, R.color.black))
+
+                val dMe: Drawable = ContextCompat.getDrawable(this, R.mipmap.icon_me_true)!!
+                dMe.setBounds(0, 0, dMe.minimumWidth, dMe.minimumHeight)
+                Btn2.setCompoundDrawables(
+                    null,
+                    dMe,
+                    null,
+                    null
+                )
+                Btn2.setTextColor(ContextCompat.getColor(this, R.color.green_700))
+
+                switchFragment(meFragment, MeFragment.TAG)
+
+            }
+        }
+    }
+
+    var mCurrentFragment: Fragment? = null
+    private fun switchFragment(to: Fragment, TAG: String) {
+        if (mCurrentFragment != to) {
+            if (supportFragmentManager.findFragmentByTag(TAG) == null) {
+                if (mCurrentFragment == null) {
+                    supportFragmentManager.beginTransaction()
+                        .add(R.id.fragmentContainerView, to, TAG).commit()
+                } else {
+                    supportFragmentManager.beginTransaction().hide(mCurrentFragment!!)
+                        .add(R.id.fragmentContainerView, to, TAG).commit()
+                }
+
+            } else {
+                supportFragmentManager.beginTransaction().hide(mCurrentFragment!!).show(to).commit()
+            }
+
+            mCurrentFragment = to
+        }
+
+
+    }
+}

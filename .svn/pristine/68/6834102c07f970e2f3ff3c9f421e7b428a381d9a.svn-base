@@ -1,0 +1,58 @@
+package com.daomingedu.talentgame.mvp.model
+
+import com.daomingedu.talentgame.mvp.contract.MusicRaceUploadContract
+import com.daomingedu.talentgame.mvp.model.api.service.UploadService
+import com.daomingedu.talentgame.mvp.model.entity.BaseJson
+import com.daomingedu.talentgame.mvp.model.entity.CompareFaceScoreBean
+import com.daomingedu.talentgame.mvp.model.entity.UploadVideoParamBean
+import com.jess.arms.di.scope.ActivityScope
+import com.jess.arms.integration.IRepositoryManager
+import com.jess.arms.mvp.BaseModel
+import io.reactivex.Observable
+import javax.inject.Inject
+
+/**
+ * Description
+ * Created by jianhongxu on 4/14/21
+ */
+@ActivityScope
+class MusicRaceUploadModel
+@Inject constructor(repositoryManager: IRepositoryManager) : BaseModel(repositoryManager),
+    MusicRaceUploadContract.Model {
+    override fun getUploadVideoParam(
+        url:String,
+        key: String,
+        testSignId: String,
+        studentId: String
+    ): Observable<BaseJson<UploadVideoParamBean>> {
+
+        return mRepositoryManager.obtainRetrofitService(UploadService::class.java)
+            .getUploadVideoParam(url,key, testSignId, studentId)
+    }
+
+    override fun saveUploadVideo(
+        url:String,
+        key:String,
+
+        testSignId: String,
+        studentId: String,
+        videoPath: String,
+        videoSize: String
+    ): Observable<BaseJson<Any>> {
+        return mRepositoryManager.obtainRetrofitService(UploadService::class.java)
+            .saveUploadVideo(url,key, testSignId, studentId, videoPath, videoSize)
+    }
+
+    override fun getWaterMark(key: String): Observable<BaseJson<String>> {
+        return mRepositoryManager.obtainRetrofitService(UploadService::class.java).getWaterMark(key)
+    }
+
+    override fun getCompareFaceScore(
+        sessionId: String,
+        testSignId: String,
+        base64Image: String
+    ): Observable<BaseJson<CompareFaceScoreBean>> {
+        return mRepositoryManager.obtainRetrofitService(UploadService::class.java)
+            .getCompareFaceScore(sessionId, testSignId, base64Image)
+    }
+}

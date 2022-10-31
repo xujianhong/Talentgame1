@@ -1,0 +1,7 @@
+include ':videocompressor'
+include ':videoRecord'
+include ':arms-imageloader-glide'
+include ':arms'
+include ':imagepicker'
+include ':app'
+rootProject.name = "Talentgame"

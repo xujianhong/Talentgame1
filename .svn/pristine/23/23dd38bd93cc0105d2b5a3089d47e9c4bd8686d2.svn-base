@@ -1,0 +1,53 @@
+package com.daomingedu.talentgame.mvp.ui.fragment
+
+import android.os.Bundle
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import com.daomingedu.talentgame.R
+import com.daomingedu.talentgame.di.component.DaggerHomeComponent
+import com.daomingedu.talentgame.di.module.HomeModule
+import com.daomingedu.talentgame.mvp.contract.HomeContract
+import com.daomingedu.talentgame.mvp.presenter.HomePresenter
+import com.daomingedu.talentgame.mvp.presenter.MainPresenter
+import com.jess.arms.base.BaseFragment
+import com.jess.arms.di.component.AppComponent
+import com.jess.arms.utils.ArmsUtils
+
+/**
+ * Created by jianhongxu on 3/31/21
+ * Description
+ */
+class HomeFragment : BaseFragment<HomePresenter>(), HomeContract.View {
+    override fun setupFragmentComponent(appComponent: AppComponent) {
+        DaggerHomeComponent.builder().appComponent(appComponent).homeModule(HomeModule(this))
+            .build().inject(this)
+    }
+
+    companion object{
+        const val TAG = "HomeFragment"
+        fun newInstance():HomeFragment{
+            return HomeFragment()
+        }
+    }
+
+    override fun initView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View {
+        return inflater.inflate(R.layout.fragment_home, container, false)
+    }
+
+    override fun initData(savedInstanceState: Bundle?) {
+
+    }
+
+    override fun setData(data: Any?) {
+
+    }
+
+    override fun showMessage(message: String) {
+        ArmsUtils.snackbarText(message)
+    }
+}

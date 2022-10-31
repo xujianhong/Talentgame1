@@ -1,0 +1,1 @@
+-keep class com.daomingedu.talentgame.app.GlobalConfiguration

@@ -1,0 +1,84 @@
+package com.daomingedu.talentgame.mvp.ui.fragment
+
+import android.content.Intent
+import android.os.Bundle
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import androidx.appcompat.app.AlertDialog
+import com.daomingedu.onecp.app.onClick
+import com.daomingedu.talentgame.R
+import com.daomingedu.talentgame.di.component.DaggerMeComponent
+import com.daomingedu.talentgame.di.module.MeModule
+import com.daomingedu.talentgame.mvp.contract.MeContract
+import com.daomingedu.talentgame.mvp.model.entity.AboutUsBean
+import com.daomingedu.talentgame.mvp.model.entity.CheckCerBean
+import com.daomingedu.talentgame.mvp.model.entity.UserInfoBean
+import com.daomingedu.talentgame.mvp.presenter.MePresenter
+import com.daomingedu.talentgame.mvp.ui.LoginActivity
+import com.jess.arms.base.BaseFragment
+import com.jess.arms.di.component.AppComponent
+import com.jess.arms.utils.ArmsUtils
+import kotlinx.android.synthetic.main.fragment_me.*
+
+/**
+ * Created by jianhongxu on 3/31/21
+ * Description
+ */
+class MeFragment : BaseFragment<MePresenter>(), MeContract.View {
+    override fun setupFragmentComponent(appComponent: AppComponent) {
+        DaggerMeComponent.builder().appComponent(appComponent).meModule(MeModule(this)).build()
+            .inject(this)
+    }
+
+    companion object{
+        const val TAG = "MeFragment"
+        fun newInstance():MeFragment{
+            return MeFragment()
+        }
+    }
+
+    override fun initView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View {
+        return inflater.inflate(R.layout.fragment_me, container, false)
+    }
+
+    override fun initData(savedInstanceState: Bundle?) {
+
+        btnExit.onClick {
+            AlertDialog.Builder(activity!!).setTitle("确认注销登陆?")
+                .setNegativeButton("否",null)
+                .setPositiveButton("是") { _, _ -> mPresenter?.loginOut() }
+                .show()
+        }
+
+    }
+
+    override fun setData(data: Any?) {
+
+    }
+
+    override fun requestLogoutSuccess() {
+        startActivity(Intent(mContext,LoginActivity::class.java))
+        activity?.finish()
+    }
+
+    override fun requestGetCustomerInfoSuccess(data: UserInfoBean?) {
+        TODO("Not yet implemented")
+    }
+
+    override fun requestAboutUsSuccess(data: AboutUsBean?) {
+        TODO("Not yet implemented")
+    }
+
+    override fun requestCheckCerSuccess(data: CheckCerBean?) {
+        TODO("Not yet implemented")
+    }
+
+    override fun showMessage(message: String) {
+        ArmsUtils.snackbarText(message)
+    }
+}
